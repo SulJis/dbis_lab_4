@@ -42,7 +42,7 @@ CREATE TABLE ZNO_STATS(
     MathLang varchar(50),
     MathTestStatus varchar(50),
     MathBall100 real,
-    HistBall12 smallint,
+    MathBall12 smallint,
     MathBall smallint,
     MathPTName varchar(200),
     MathPTRegName varchar(100),
