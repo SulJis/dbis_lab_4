@@ -13,7 +13,6 @@ dbis_lab1
 │   ├── Odata2019File.csv - треба додати
 │   └── Odata2020File.csv - треба додати
 ├── scripts
-│   ├── batches_to_sqltable.py
 │   ├── csv_to_batches.py
 │   └── small_funcs.py
 └── sql_queries
@@ -40,7 +39,6 @@ dbis_lab1
 ├── query_results
 │   └── query_data.csv
 ├── scripts
-│   ├── batches_to_sqltable.py
 │   ├── csv_to_batches.py
 │   └── small_funcs.py
 └── sql_queries
