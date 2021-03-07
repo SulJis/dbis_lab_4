@@ -19,9 +19,13 @@ float_indexes = [18, 29, 39, 49, 59, 69, 79, 88, 98, 108, 118]
 encoding = "cp1251"
 batches_path = "batches"
 datasets_path = "data"
+sql_queries_path = "sql_queries"
+logs_path = "logs"
+query_results_path = "query_results"
 batch_rows = 1000
 
-head = extract_header("data/Odata2019File.csv", ";")
+file_to_extcact_head = os.listdir(datasets_path)[0]
+head = extract_header(os.path.join(datasets_path, file_to_extcact_head), ";")
 inserted_batches = []
 
 
@@ -56,16 +60,12 @@ def batches_to_sqltable(table, head, batches, db_data):
         time.sleep(5)
 
 
-create_query = extract_query("sql_queries/CREATE.sql")
+create_query = extract_query(os.path.join(sql_queries_path, "CREATE.sql"))
 cursor.execute(create_query)
 conn.commit()
 
-batches = os.listdir(batches_path)
-if len(batches) > 0:
-    for batch in batches:
-        os.remove(os.path.join(batches_path, batch))
-
 print("Division into batches...")
+os.mkdir(batches_path)
 batch_division_time1 = time.time()
 datasets = os.listdir(datasets_path)
 ctr = 1
@@ -98,10 +98,11 @@ sql_insetrion_time2 = time.time()
 
 query_execution_time1 = time.time()
 print("Executing a query...")
-avg_marks_query = extract_query("sql_queries/query.sql")
+avg_marks_query = extract_query(os.path.join("sql_queries", "query.sql"))
 cursor.execute(avg_marks_query)
 query_result = cursor.fetchall()
-result_file = "query_results/data.csv"
+os.mkdir(query_results_path)
+result_file = os.path.join(query_results_path, "query_data.csv")
 query_to_csv(result_file, query_result, ["Регіон", "Середній бал з англійскої мови"])
 print("Completed. CSV stored in {}.".format(result_file))
 query_execution_time2 = time.time()
@@ -116,9 +117,10 @@ batch_division_time = minutes_to_seconds(batch_division_time2 - batch_division_t
 sql_insetrion_time = minutes_to_seconds(sql_insetrion_time2 - sql_insetrion_time1)
 query_execution_time = minutes_to_seconds(query_execution_time2 - query_execution_time1)
 
-logfile = "logs/time_log.log"
+os.mkdir(logs_path)
+logfile = os.path.join(logs_path, "time_log.log")
 
-with open("logs/time_log.log", "w", encoding="UTF-8") as f:
+with open(logfile, "w", encoding="UTF-8") as f:
     f.write("{}/{} files was inserted.\n".format(len(inserted_batches), len(batches)))
     f.write("Batch division: {}\n".format(batch_division_time))
     f.write("SQL insertion: {}\n".format(sql_insetrion_time))
