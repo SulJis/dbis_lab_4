@@ -22,7 +22,7 @@ def query_to_csv(file, result, head):
             writer.writerow(row)
 
 
-def minutes_to_seconds(seconds):
+def seconds_to_minutes(seconds):
     minutes = int(seconds // 60)
     seconds = round(seconds % 60)
     return "{} minutes {} seconds".format(minutes, seconds)

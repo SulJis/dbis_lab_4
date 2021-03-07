@@ -1,7 +1,7 @@
 import psycopg2
 import csv
 from psycopg2 import sql
-from scripts.small_funcs import extract_header, extract_query, query_to_csv, minutes_to_seconds
+from scripts.small_funcs import extract_header, extract_query, query_to_csv, seconds_to_minutes
 from scripts.csv_to_batches import csv_to_batches
 import sys
 import time
@@ -112,10 +112,10 @@ conn.close()
 
 total_time2 = time.time()
 
-total_time = minutes_to_seconds(total_time2 - total_time1)
-batch_division_time = minutes_to_seconds(batch_division_time2 - batch_division_time1)
-sql_insetrion_time = minutes_to_seconds(sql_insetrion_time2 - sql_insetrion_time1)
-query_execution_time = minutes_to_seconds(query_execution_time2 - query_execution_time1)
+total_time = seconds_to_minutes(total_time2 - total_time1)
+batch_division_time = seconds_to_minutes(batch_division_time2 - batch_division_time1)
+sql_insetrion_time = seconds_to_minutes(sql_insetrion_time2 - sql_insetrion_time1)
+query_execution_time = seconds_to_minutes(query_execution_time2 - query_execution_time1)
 
 os.mkdir(logs_path)
 logfile = os.path.join(logs_path, "time_log.log")
