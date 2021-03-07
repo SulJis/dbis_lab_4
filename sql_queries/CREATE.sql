@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS zno_stats;
+
 CREATE TABLE ZNO_STATS(
     OUTID varchar(36) PRIMARY KEY,
     Birth smallint,
