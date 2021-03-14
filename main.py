@@ -23,6 +23,7 @@ def batches_to_table(idx):
     errors = 0
     conn = psycopg2.connect(dbname=dbname, user=user, password=password, host=host, port=port)
     cursor = conn.cursor()
+    errors = 0
     while len(batches[idx:]) > 0:
         try:
             fields = sql.SQL(", ").join([sql.Identifier(i.lower()) for i in head])
@@ -40,14 +41,14 @@ def batches_to_table(idx):
             print(e)
             time.sleep(5)
             errors += 1
+            if errors > 20:
+                exit()
 
         except psycopg2.OperationalError as e:
             print(e)
             print("Trying to reconnect...")
             errors += 1
             time.sleep(5)
-            if errors > 10:
-                exit()
             conn = try_connect()
             cursor = conn.cursor()
 
