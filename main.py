@@ -54,13 +54,6 @@ def batches_to_table(idx):
     print("Completed.\n")
 
 
-# state = {
-#     "status": "EMPTY_DATABASE",
-#     "batches": "",
-#     "insertions": ""
-# }
-# write_state(state)
-
 state = get_state()
 print_state(state)
 
@@ -74,10 +67,7 @@ head = extract_header(os.path.join(datasets_path, file_to_extcact_head), ";")
 head.insert(0, "year")
 inserted_batches = []
 
-if state["status"] == "EMPTY_DATABASE" or state["status"] == "BATCH_DIVISION_IS_NOT_FINISHED":
-    state["status"] = "BATCH_DIVISION_IS_NOT_FINISHED"
-    write_state(state)
-
+if state["status"] == "EMPTY_DATABASE":
     if os.path.exists(batches_path):
         files = os.listdir(batches_path)
         for file in files:
