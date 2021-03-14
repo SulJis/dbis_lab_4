@@ -1,130 +1,180 @@
 import psycopg2
-import csv
-from psycopg2 import sql
-from scripts.small_funcs import extract_header, extract_query, query_to_csv, seconds_to_minutes
-from scripts.csv_to_batches import csv_to_batches
 import sys
 import time
-import os
-import re
+import psycopg2.sql as sql
+from scripts.csv_to_batches import csv_to_batches
+from scripts.batches_to_table import batch_to_table
+from scripts.small_funcs import *
 
-total_time1 = time.time()
+
+def try_connect():
+    for i in range(10):
+        try:
+            conn = psycopg2.connect(dbname=dbname, user=user, password=password, host=host, port=port)
+            return conn
+        except Exception as e:
+            print(e)
+            print("Trying to reconnect...")
+            time.sleep(5)
+    exit()
+
+
+def batches_to_table(idx):
+    errors = 0
+    conn = psycopg2.connect(dbname=dbname, user=user, password=password, host=host, port=port)
+    cursor = conn.cursor()
+    while len(batches[idx:]) > 0:
+        try:
+            fields = sql.SQL(", ").join([sql.Identifier(i.lower()) for i in head])
+            for batch in batches[idx:]:
+                batch_to_table(batch, "zno_stats", fields, cursor)
+
+                conn.commit()
+                inserted_batches.append(batch)
+                idx += 1
+                state["insertions"] = f"{idx}/{len(batches)}"
+                write_state(state)
+
+        except (psycopg2.ProgrammingError, psycopg2.DataError) as e:
+            conn.rollback()
+            print(e)
+            time.sleep(5)
+            errors += 1
+
+        except psycopg2.OperationalError as e:
+            print(e)
+            print("Trying to reconnect...")
+            errors += 1
+            time.sleep(5)
+            if errors > 10:
+                exit()
+            conn = try_connect()
+            cursor = conn.cursor()
+
+    print("Completed.\n")
+
+
+# state = {
+#     "status": "EMPTY_DATABASE",
+#     "batches": "",
+#     "insertions": ""
+# }
+# write_state(state)
+
+state = get_state()
+print_state(state)
+
 dbname, user, password, host, port = sys.argv[1:]
 
 conn = psycopg2.connect(dbname=dbname, user=user, password=password, host=host, port=port)
 cursor = conn.cursor()
 
-float_indexes = [18, 29, 39, 49, 59, 69, 79, 88, 98, 108, 118]
-
-encoding = "cp1251"
-batches_path = "batches"
-datasets_path = "data"
-sql_queries_path = "sql_queries"
-logs_path = "logs"
-query_results_path = "query_results"
-batch_rows = 1000
-
 file_to_extcact_head = os.listdir(datasets_path)[0]
 head = extract_header(os.path.join(datasets_path, file_to_extcact_head), ";")
+head.insert(0, "year")
 inserted_batches = []
 
+if state["status"] == "EMPTY_DATABASE" or state["status"] == "BATCH_DIVISION_IS_NOT_FINISHED":
+    state["status"] = "BATCH_DIVISION_IS_NOT_FINISHED"
+    write_state(state)
 
-def batches_to_sqltable(table, head, batches, db_data):
-    try:
-        conn, cur = db_data
-        fields = sql.SQL(", ").join([sql.Identifier(i.lower()) for i in head])
-        for batch in batches:
-            with open(batch, "r", encoding=encoding) as f:
-                print("Inserting {}...".format(batch))
-                reader = csv.reader(f, delimiter=";")
+    if os.path.exists(batches_path):
+        files = os.listdir(batches_path)
+        for file in files:
+            os.remove(os.path.join(batches_path, file))
+        os.rmdir(batches_path)
 
-                for row in reader:
-                    for n, i in enumerate(row):
-                        if n in float_indexes:
-                            row[n] = row[n].replace(",", ".")
-                        if i == "null":
-                            row[n] = None
-                    insert = sql.SQL("INSERT INTO {table} ({fields}) VALUES ({values});").format(
-                        table=sql.SQL(table),
-                        fields=fields,
-                        values=sql.SQL(", ").join(map(sql.Literal, row)))
+    print("Division into batches...")
+    os.mkdir(batches_path)
+    batch_division_time1 = time.time()
+    datasets = os.listdir(datasets_path)
 
-                    cur.execute(insert)
-                conn.commit()
-                inserted_batches.append(batch)
+    ctr = 1
+    for dataset in datasets:
+        ctr = csv_to_batches(os.path.join(datasets_path, dataset), batches_path, batch_rows, encoding, ctr)
+    batches = os.listdir(batches_path)
 
-    except Exception as e:
-        print("Error caught.")
-        print(e)
-        print("last batch: {}".format(inserted_batches[-1]))
-        time.sleep(5)
+    state["batches"] = f"{len(batches)}"
+    write_state(state)
+
+    batches = sorted(batches, key=lambda x: extract_number(x))
+    batches = [os.path.join(batches_path, batch) for batch in batches]
+    batch_division_time2 = time.time()
+
+    print("Completed.\n")
+
+    state["status"] = "INSERTION_IS_NOT_FINISHED"
+    write_state(state)
+
+    print("Inseting into database...")
+
+    sql_insetrion_time1 = time.time()
+    create_query = extract_text(os.path.join(sql_queries_path, "CREATE.sql"))
+    cursor.execute(create_query)
+    conn.commit()
+
+    inserted_batches = []
+    batches_to_table(0)
+
+    print("Completed.\n")
+    sql_insetrion_time2 = time.time()
+    state["status"] = "TABLE_POPULATED"
+    write_state(state)
+
+    query_execution_time1 = time.time()
+
+    store_query(cursor, "query.sql", "query_data.csv", ["Регіон", "Рік", "Середній бал з англійскої мови"])
+
+    query_execution_time2 = time.time()
+
+    batch_division_time = seconds_to_minutes(batch_division_time2 - batch_division_time1)
+    sql_insetrion_time = seconds_to_minutes(sql_insetrion_time2 - sql_insetrion_time1)
+    query_execution_time = seconds_to_minutes(query_execution_time2 - query_execution_time1)
+
+    logfile = os.path.join(logs_path, "time_log.log")
+
+    with open(logfile, "w", encoding="UTF-8") as f:
+        f.write("{}/{} files was inserted.\n".format(len(inserted_batches), len(batches)))
+        f.write("Batch division: {}\n".format(batch_division_time))
+        f.write("SQL insertion: {}\n".format(sql_insetrion_time))
+        f.write("Query execution and writing to csv: {}\n".format(query_execution_time))
+
+    print("Log file stored in {}.".format(logfile))
 
 
-create_query = extract_query(os.path.join(sql_queries_path, "CREATE.sql"))
-cursor.execute(create_query)
-conn.commit()
+elif state["status"] == "INSERTION_IS_NOT_FINISHED":
+    batches = os.listdir(batches_path)
+    batches = sorted(batches, key=lambda x: extract_number(x))
+    batches = [os.path.join(batches_path, batch) for batch in batches]
 
-print("Division into batches...")
-os.mkdir(batches_path)
-batch_division_time1 = time.time()
-datasets = os.listdir(datasets_path)
-ctr = 1
-for dataset in datasets:
-    ctr = csv_to_batches(os.path.join(datasets_path, dataset), batches_path, batch_rows, encoding, ctr)
+    (insetred, total) = get_splitted_nums(state["insertions"])
+    batches_to_table(insetred)
+    state["status"] = "TABLE_POPULATED"
+    write_state(state)
 
-batches = os.listdir(batches_path)
-batches = sorted(batches, key=lambda x: int(re.findall(r"\d+", x)[0]))
-batches = [os.path.join(batches_path, batch) for batch in batches]
-batch_division_time2 = time.time()
-print("Completed.\n")
 
-print("Inseting into database...")
-sql_insetrion_time1 = time.time()
-ctr = 1
-idx = 0
-while ctr < 100 and len(batches[idx:]) > 0:
-    try:
-        conn = psycopg2.connect(dbname=dbname, user=user, password=password, host=host, port=port)
-        cursor = conn.cursor()
-        batches_to_sqltable("zno_stats", head, batches[idx:], [conn, cursor])
-        idx = len(inserted_batches)
-    except Exception as e:
-        print("Trying to reconnect...")
-        time.sleep(5)
-        ctr += 1
+elif state["status"] == "TABLE_POPULATED":
+    conn = psycopg2.connect(dbname=dbname, user=user, password=password, host=host, port=port)
+    cursor = conn.cursor()
+    op = ""
+    while op != "3":
+        print_state(state)
 
-print("Completed.\n")
-sql_insetrion_time2 = time.time()
+        print("1. Execute sql query.\n"
+              "2. Drop table.\n"
+              "3. Exit.")
 
-query_execution_time1 = time.time()
-print("Executing a query...")
-avg_marks_query = extract_query(os.path.join("sql_queries", "query.sql"))
-cursor.execute(avg_marks_query)
-query_result = cursor.fetchall()
-os.mkdir(query_results_path)
-result_file = os.path.join(query_results_path, "query_data.csv")
-query_to_csv(result_file, query_result, ["Регіон", "Середній бал з англійскої мови"])
-print("Completed. CSV stored in {}.".format(result_file))
-query_execution_time2 = time.time()
-
-cursor.close()
-conn.close()
-
-total_time2 = time.time()
-
-total_time = seconds_to_minutes(total_time2 - total_time1)
-batch_division_time = seconds_to_minutes(batch_division_time2 - batch_division_time1)
-sql_insetrion_time = seconds_to_minutes(sql_insetrion_time2 - sql_insetrion_time1)
-query_execution_time = seconds_to_minutes(query_execution_time2 - query_execution_time1)
-
-os.mkdir(logs_path)
-logfile = os.path.join(logs_path, "time_log.log")
-
-with open(logfile, "w", encoding="UTF-8") as f:
-    f.write("{}/{} files was inserted.\n".format(len(inserted_batches), len(batches)))
-    f.write("Batch division: {}\n".format(batch_division_time))
-    f.write("SQL insertion: {}\n".format(sql_insetrion_time))
-    f.write("Query execution and writing to csv: {}\n".format(query_execution_time))
-    f.write("Total time: {}\n".format(total_time))
-
-print("Log file stored in {}.".format(logfile))
+        op = input("Choose the option: ")
+        if op == "1":
+            store_query(cursor, "query.sql", "query_data.csv", ["Регіон", "Рік", "Середній бал з англійскої мови"])
+        elif op == "2":
+            cursor.execute("DROP TABLE zno_stats;")
+            conn.commit()
+            state["status"] = "EMPTY_DATABASE"
+            state["batches"] = ""
+            state["insertions"] = ""
+            write_state(state)
+            print("Table has dropped.")
+            break
+    cursor.close()
+    conn.close()
