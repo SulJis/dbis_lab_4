@@ -65,7 +65,7 @@ python3 main.py dbname username password host port
 ```
 де після main.py йде перелічення конфігураційних даних для з'єднання з сервером PostgreSQL.
 
-Програма може перебувати в трьох станах: EMPTY_DATABASE, INSERTION_IS_NOT_FINISHED, TABLE_POPULATED.
+Програма може перебувати в трьох станах: EMPTY_DATABASE, INSERTION_IS_NOT_FINISHED, TABLE_POPULATED. Операції після запуску скрипта відповідають цім станам:
 
 EMPTY_DATABASE: таблиця не створена. Скрипт розбиває CSV файли в директорії "data" на більш малі файли. Після цього кожний файл додається до бази даних. Коли вся таблиця заповнена даними, виконується запит до бази даних, створюється файл та додається у query_results.csv. У кінці створюється файл time_log.log з замірами часу.
 
