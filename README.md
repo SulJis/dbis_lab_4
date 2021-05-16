@@ -55,7 +55,10 @@ dbis_lab4
 ```bash
 python main.py <db-url> <port>
 ```
-де після main.py йде перелічення конфігураційних даних для з'єднання з сервером MongoDB.
+де після main.py йде перелічення конфігураційних даних для з'єднання з сервером MongoDB. Наприклад: 
+```bash
+python main.py localhost 27017
+```
 
 Програма може перебувати в трьох станах: EMPTY_DATABASE, INSERTION_IS_NOT_FINISHED, TABLE_POPULATED. Операції після запуску скрипта відповідають цім станам:
 
