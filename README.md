@@ -7,18 +7,18 @@
 dbis_lab1
 ├── main.py
 |── logs
-|   |──status.csv
+|   └── status.csv
 |── output
-|   |──time_log.log
-|   |──query_data.csv
+|   |── time_log.log
+|   └── query_data.csv
 ├── data - треба створити
 │   ├── Odata2019File.csv - треба додати
 │   └── Odata2020File.csv - треба додати
-├── scripts
-│   ├── csv_to_batches.py
-│   └── small_funcs.py
-│   └── constants.py
-│   └── batches_to_table.py
+└── scripts
+    ├── csv_to_batches.py
+    └── small_funcs.py
+    └── constants.py
+    └── batches_to_table.py
 ```
 Щоб додати CSV файли результатами ЗНО, треба створити директорію "data" та розмістити в ній ці файли.
 Також було додано папку output з файлами, що генеруються вже після того, як програма відпрацьовує до кінця. Вона була додана для того, щоб ви побачили ці файли без повного виконання довгого скрипта.
@@ -29,7 +29,7 @@ dbis_lab1
 ├── batches
 │   ├── batch_1.csv
 │   ├── batch_2.csv
-|   |──...
+|   └── ...
 ├── data
 │   ├── Odata2019File.csv
 │   └── Odata2020File.csv
@@ -39,15 +39,11 @@ dbis_lab1
 |── output
 |   |── time_log.log
 |   └── query_data.csv
-├── scripts
-│   ├── csv_to_batches.py
-│   └── small_funcs.py
-│   └── constants.py
-│   └── batches_to_table.py
-└── sql_queries
-    ├── CREATE.sql
-    └── query.sql
-
+└── scripts
+    ├── csv_to_batches.py
+    └── small_funcs.py
+    └── constants.py
+    └── batches_to_table.py
 ```
 Файл query_data.csv містить CSV дані до запиту, вказаному за варіантом - дані про середній бал з англійської мови в кожному регіоні за роками. Файл містить рядок - заголовок (Регіон, Рік, Середній бал з англійської мови), в наступних рядках приведені відповідно конкретні дані.
 
