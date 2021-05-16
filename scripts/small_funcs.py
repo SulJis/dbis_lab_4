@@ -20,12 +20,12 @@ def extract_text(file):
         return query
 
 
-def query_to_csv(file, result, head):
-    with open(file, "w", encoding="UTF-8") as f:
-        writer = csv.writer(f, delimiter=";")
+def query_to_csv(file, data, head):
+    with open(os.path.join(output_path, file), "w", encoding="UTF-8") as f:
+        writer = csv.writer(f)
         writer.writerow(head)
-        for row in result:
-            writer.writerow(row)
+        for obj in data:
+            writer.writerow([obj["_id"]["Region"], obj["_id"]["Year"], obj["avgBall"]])
 
 
 def seconds_to_minutes(seconds):
@@ -75,13 +75,8 @@ def is_zero_arr(arr):
     return res
 
 
-def store_query(cursor, sqlfile, csvfile, header):
+def store_query(db, result_file, pipeline, header):
     print("Executing a query...")
-    avg_marks_query = extract_text(os.path.join(sql_queries_path, sqlfile))
-    cursor.execute(avg_marks_query)
-    query_result = cursor.fetchall()
-    if not os.path.exists(query_results_path):
-        os.mkdir(query_results_path)
-    result_file = os.path.join(query_results_path, csvfile)
+    query_result = db.zno_data.aggregate(pipeline)
     query_to_csv(result_file, query_result, header)
     print("Completed. CSV stored in {}.".format(result_file))

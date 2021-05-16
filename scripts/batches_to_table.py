@@ -1,24 +1,22 @@
 import csv
-import time
-
-import psycopg2.sql as sql
-from scripts.small_funcs import write_state
 from scripts.constants import *
 
 
-def batch_to_table(batch, table, fields, cur):
+def batch_to_table(batch, fields, db):
     with open(batch, "r", encoding=encoding) as f:
         print("Inserting {}...".format(batch))
         reader = csv.reader(f, delimiter=";")
-
+        docs_list = []
         for row in reader:
-            for n, i in enumerate(row):
-                if n in float_indexes:
-                    row[n] = row[n].replace(",", ".")
-                if i == "null":
-                    row[n] = None
-            insert = sql.SQL("INSERT INTO {table} ({fields}) VALUES ({values});").format(
-                table=sql.SQL(table),
-                fields=fields,
-                values=sql.SQL(", ").join(map(sql.Literal, row)))
-            cur.execute(insert)
+            doc = {}
+            for key, value in zip(fields, row):
+                if value.isdigit():
+                    value = int(value)
+                if value == "null":
+                    value = None
+                if "Ball100" in key and value is not None:
+                    value = value.replace(",", ".")
+                    value = float(value)
+                doc.update({key: value})
+            docs_list.append(doc)
+        db.zno_data.insert_many(docs_list)
